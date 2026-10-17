@@ -1,0 +1,7 @@
+metric,value
+Rows in (raw),8500
+Rows out (clean),8500
+Rows removed,0
+Duplicates removed,0
+Impossible values removed,0
+Missing values left,0
