@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SleepDebtDW - Interactive Analytics Dashboard</title>
+  <!-- Chart.js local with CDN fallback -->
+  <script src="chart.umd.min.js"></script>
+  <script>
+    if (typeof Chart === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"><\/script>');
+    }
+  </script>
+  <script src="dashboard_data.js"></script>
+  <style>
+    :root {
+      --bg-main: #0B0F19;
+      --bg-card: #111827;
+      --bg-card-hover: #1F2937;
+      --border-color: #1F293D;
+      --text-main: #F3F4F6;
+      --text-muted: #9CA3AF;
+      --accent-blue: #3B82F6;
+      --accent-indigo: #6366F1;
+      --accent-purple: #8B5CF6;
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-rose: #EF4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding-bottom: 50px;
+    }
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(180deg, #131D31 0%, #0B0F19 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 24px 0 20px 0;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(8px);
+    }
+
+    .header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+    }
+
+    .title-group h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #FFFFFF;
+    }
+
+    .title-group p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-secondary {
+      background-color: #1E293B;
+      color: #E2E8F0;
+      border-color: #334155;
+    }
+
+    .btn-secondary:hover {
+      background-color: #334155;
+      color: #FFFFFF;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
+    }
+
+    /* Filter Bar */
+    .filter-panel {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-top: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .filter-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      color: #94A3B8;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .filter-item label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #94A3B8;
+    }
+
+    .filter-select {
+      background-color: #0F172A;
+      color: #F8FAFC;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .filter-select:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    /* KPI Row */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .kpi-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 18px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      border-color: #334155;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+
+    .kpi-users::before { background-color: var(--accent-blue); }
+    .kpi-sleep::before { background-color: var(--accent-emerald); }
+    .kpi-screen::before { background-color: var(--accent-amber); }
+    .kpi-latency::before { background-color: var(--accent-purple); }
+    .kpi-fatigue::before { background-color: var(--accent-rose); }
+    .kpi-debt::before { background-color: #EC4899; }
+
+    .kpi-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+
+    .kpi-sub {
+      font-size: 12px;
+      color: #64748B;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+      margin-top: 20px;
+    }
+
+    .col-6 { grid-column: span 6; }
+    .col-4 { grid-column: span 4; }
+    .col-8 { grid-column: span 8; }
+    .col-12 { grid-column: span 12; }
+
+    @media (max-width: 1024px) {
+      .col-6, .col-4, .col-8 { grid-column: span 12; }
+    }
+
+    .chart-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .chart-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #F1F5F9;
+    }
+
+    .chart-subtitle {
+      font-size: 12px;
+      color: #94A3B8;
+      margin-top: 2px;
+    }
+
+    .chart-canvas-container {
+      position: relative;
+      flex-grow: 1;
+      min-height: 270px;
+      width: 100%;
+    }
+
+    /* Key Insights Banner */
+    .insights-panel {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 22px;
+      margin-top: 24px;
+    }
+
+    .insights-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .insight-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid #1E293B;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .insight-item h4 {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #60A5FA;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .insight-item p {
+      font-size: 12.5px;
+      color: #CBD5E1;
+      line-height: 1.45;
+    }
+
+    /* Data Table Section */
+    .table-section {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 24px;
+    }
+
+    .table-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .search-input {
+      background-color: #0F172A;
+      color: #F8FAFC;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      min-width: 260px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #0F172A;
+      color: #94A3B8;
+      font-weight: 600;
+      padding: 10px 12px;
+      border-bottom: 1px solid #334155;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1E293B;
+      color: #E2E8F0;
+      white-space: nowrap;
+    }
+
+    tr:hover td {
+      background-color: rgba(51, 65, 85, 0.3);
+    }
+
+    .badge {
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .badge-optimal { background-color: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-mild { background-color: rgba(59, 130, 246, 0.15); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-mod { background-color: rgba(245, 158, 11, 0.15); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-severe { background-color: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .pagination-btns {
+      display: flex;
+      gap: 6px;
+    }
+
+    .page-btn {
+      background-color: #0F172A;
+      color: #CBD5E1;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .page-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .page-btn:hover:not(:disabled) {
+      background-color: #1E293B;
+      color: #FFFFFF;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header>
+    <div class="container header-inner">
+      <div class="logo-area">
+        <div class="logo-icon">🌙</div>
+        <div class="title-group">
+          <h1>SleepDebtDW Interactive Analytics</h1>
+          <p>Medallion Data Warehouse (Gold Layer) • 8,500 Study Cohort</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="resetFilters()">↺ Reset Filters</button>
+        <button class="btn btn-primary" onclick="exportFilteredCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Filter Panel -->
+    <div class="filter-panel">
+      <div class="filter-title">
+        <span>Cohort Slicing & Dimension Filters</span>
+        <span id="activeFilterCount" style="color: #60A5FA; font-weight: normal; font-size: 12px;">Active Filters: None</span>
+      </div>
+      <div class="filter-grid">
+        <div class="filter-item">
+          <label>Chronotype</label>
+          <select id="filterChronotype" class="filter-select" onchange="applyFilters()">
+            <option value="ALL">All Chronotypes</option>
+            <option value="Morning Lark">Morning Lark</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Night Owl">Night Owl</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>Occupation Type</label>
+          <select id="filterOccupation" class="filter-select" onchange="applyFilters()">
+            <option value="ALL">All Occupations</option>
+            <option value="Corporate 9-to-5">Corporate 9-to-5</option>
+            <option value="Remote Tech">Remote Tech</option>
+            <option value="Student">Student</option>
+            <option value="Healthcare / Shift Worker">Healthcare / Shift</option>
+            <option value="Freelance / Creative">Freelance / Creative</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>Screen Time Bucket</label>
+          <select id="filterScreenBucket" class="filter-select" onchange="applyFilters()">
+            <option value="ALL">All Screen Buckets</option>
+            <option value="Low (<30 min)">Low (&lt;30 min)</option>
+            <option value="Moderate (30-59 min)">Moderate (30-59 min)</option>
+            <option value="High (60-119 min)">High (60-119 min)</option>
+            <option value="Very High (120+ min)">Very High (120+ min)</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>Primary Bedtime App</label>
+          <select id="filterApp" class="filter-select" onchange="applyFilters()">
+            <option value="ALL">All Bedtime Apps</option>
+            <option value="TikTok / Reels">TikTok / Reels</option>
+            <option value="Instagram / Reddit">Instagram / Reddit</option>
+            <option value="YouTube">YouTube</option>
+            <option value="Streaming (Netflix/Hulu)">Streaming (Netflix/Hulu)</option>
+            <option value="Messaging / Chat">Messaging / Chat</option>
+            <option value="News / Reading">News / Reading</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>Blue Light Filter</label>
+          <select id="filterBlueLight" class="filter-select" onchange="applyFilters()">
+            <option value="ALL">All (Filter ON/OFF)</option>
+            <option value="1">Filter Active (ON)</option>
+            <option value="0">Filter Inactive (OFF)</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>Caffeine Post-5PM</label>
+          <select id="filterCaffeine" class="filter-select" onchange="applyFilters()">
+            <option value="ALL">All Intake</option>
+            <option value="1">Caffeine After 5pm</option>
+            <option value="0">No Late Caffeine</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Core KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-users">
+        <div class="kpi-label">FILTERED COHORT</div>
+        <div class="kpi-value" id="kpiUsers">8,500</div>
+        <div class="kpi-sub" id="kpiUsersSub">100.0% of study population</div>
+      </div>
+      <div class="kpi-card kpi-sleep">
+        <div class="kpi-label">AVG TOTAL SLEEP</div>
+        <div class="kpi-value" id="kpiSleep">6.27 hrs</div>
+        <div class="kpi-sub" id="kpiSleepSub">Benchmark: 7.0 - 9.0 hrs</div>
+      </div>
+      <div class="kpi-card kpi-screen">
+        <div class="kpi-label">AVG BEDTIME SCREEN</div>
+        <div class="kpi-value" id="kpiScreen">59.3 min</div>
+        <div class="kpi-sub">Phone in bed before sleeping</div>
+      </div>
+      <div class="kpi-card kpi-latency">
+        <div class="kpi-label">AVG SLEEP LATENCY</div>
+        <div class="kpi-value" id="kpiLatency">36.3 min</div>
+        <div class="kpi-sub">Time taken to fall asleep</div>
+      </div>
+      <div class="kpi-card kpi-fatigue">
+        <div class="kpi-label">AVG FATIGUE SCORE</div>
+        <div class="kpi-value" id="kpiFatigue">3.79 / 10</div>
+        <div class="kpi-sub" id="kpiFatigueSub">16.3% severe fatigue (≥7)</div>
+      </div>
+      <div class="kpi-card kpi-debt">
+        <div class="kpi-label">MOD / SEVERE DEBT</div>
+        <div class="kpi-value" id="kpiDebt">60.1%</div>
+        <div class="kpi-sub" id="kpiDebtSub">5,109 users affected</div>
+      </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+      <!-- Chart 1: Screen Time Buckets vs Sleep & Latency -->
+      <div class="chart-card col-8">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Bedtime Screen Time vs Sleep Duration & Latency</div>
+            <div class="chart-subtitle">Direct impact of pre-bed phone usage on sleep length and sleep onset delay</div>
+          </div>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="chartScreenTime"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2: Sleep Debt Distribution -->
+      <div class="chart-card col-4">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Sleep Debt Classification</div>
+            <div class="chart-subtitle">Distribution across severity levels</div>
+          </div>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="chartDebtPie"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 3: Bedtime App Impact Ranking -->
+      <div class="chart-card col-6">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Bedtime Apps: Sleep Hours & Fatigue Impact</div>
+            <div class="chart-subtitle">Which applications cause the heaviest sleep disruption?</div>
+          </div>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="chartApps"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 4: Chronotype vs Occupation Matrix -->
+      <div class="chart-card col-6">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Chronotype vs Occupation Sleep Profile</div>
+            <div class="chart-subtitle">Average sleep duration by chronotype and career type</div>
+          </div>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="chartChronotype"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 5: Blue Light Filter & Caffeine Impact -->
+      <div class="chart-card col-6">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Intervention & Behavioral Impact</div>
+            <div class="chart-subtitle">Blue Light Filter vs Late Caffeine on Sleep Latency & Deep Sleep %</div>
+          </div>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="chartInterventions"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 6: Age Group Profile -->
+      <div class="chart-card col-6">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Age Group Screen Habits & High Fatigue Risk</div>
+            <div class="chart-subtitle">Phone usage in bed and rate of severe next-day exhaustion</div>
+          </div>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="chartAge"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Insights Banner -->
+    <div class="insights-panel">
+      <div class="chart-title" style="color: #93C5FD; font-size: 17px;">Key Analytical Insights from the Medallion Data Warehouse</div>
+      <div class="insights-grid">
+        <div class="insight-item">
+          <h4>📱 Screen Time Inflection Point (60+ min)</h4>
+          <p>Users spending ≥60 minutes on phones in bed experience an average sleep latency of 50.7 minutes and only 5.56 hours of sleep, with 78% reporting moderate or severe sleep debt.</p>
+        </div>
+        <div class="insight-item">
+          <h4>🎬 Short-Form Video Disruptor</h4>
+          <p>Users who engage with TikTok / Reels and Instagram / Reddit before bed suffer the lowest average sleep (5.88h) and highest next-day fatigue scores (4.16/10), outranking long-form streaming.</p>
+        </div>
+        <div class="insight-item">
+          <h4>🦉 Night Owls in Corporate Schedules</h4>
+          <p>Night owls in Corporate 9-to-5 positions endure the lowest sleep duration (5.41 hours) and highest morning alarm snoozes (2.41 times), highlighting social jetlag misalignment.</p>
+        </div>
+        <div class="insight-item">
+          <h4>💡 Blue Light Filter Efficacy</h4>
+          <p>Activating the blue light filter shortens sleep latency by an average of 4.2 minutes and preserves deep sleep percentage, offering a modest protective buffer against display light.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Explorer Table -->
+    <div class="table-section">
+      <div class="table-controls">
+        <div>
+          <div class="chart-title">Cohort Record Explorer</div>
+          <div class="chart-subtitle" id="tableRecordCount">Showing 1-10 of 8,500 records</div>
+        </div>
+        <input type="text" id="tableSearch" class="search-input" placeholder="Search user ID, app, occupation..." oninput="onSearchTable()">
+      </div>
+      <div class="table-wrapper">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Age</th>
+              <th>Occupation</th>
+              <th>Chronotype</th>
+              <th>Bedtime App</th>
+              <th>Phone Min</th>
+              <th>Blue Light</th>
+              <th>Sleep Hours</th>
+              <th>Latency</th>
+              <th>Fatigue (1-10)</th>
+              <th>Sleep Debt Status</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Populated dynamically via JS -->
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <span id="pageInfo">Page 1 of 850</span>
+        <div class="pagination-btns">
+          <button class="page-btn" id="btnPrev" onclick="changePage(-1)">← Previous</button>
+          <button class="page-btn" id="btnNext" onclick="changePage(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Global State
+    let rawRows = [];
+    let colIndex = {};
+    let filteredRows = [];
+    let currentPage = 1;
+    const pageSize = 10;
+    let chartInstances = {};
+
+    // Initialize data from bundle
+    function initData() {
+      if (!window.SLEEP_DEBT_DATA) {
+        console.error("Data bundle not loaded!");
+        return;
+      }
+      const data = window.SLEEP_DEBT_DATA;
+      data.columns.forEach((col, idx) => { colIndex[col] = idx; });
+      rawRows = data.rows;
+      filteredRows = rawRows.slice();
+
+      initCharts();
+      updateDashboard();
+    }
+
+    // Apply Filter values
+    function applyFilters() {
+      const chronotype = document.getElementById('filterChronotype').value;
+      const occupation = document.getElementById('filterOccupation').value;
+      const bucket = document.getElementById('filterScreenBucket').value;
+      const app = document.getElementById('filterApp').value;
+      const blueLight = document.getElementById('filterBlueLight').value;
+      const caffeine = document.getElementById('filterCaffeine').value;
+
+      let activeCount = 0;
+      if (chronotype !== 'ALL') activeCount++;
+      if (occupation !== 'ALL') activeCount++;
+      if (bucket !== 'ALL') activeCount++;
+      if (app !== 'ALL') activeCount++;
+      if (blueLight !== 'ALL') activeCount++;
+      if (caffeine !== 'ALL') activeCount++;
+
+      document.getElementById('activeFilterCount').textContent =
+        activeCount === 0 ? "Active Filters: None" : `Active Filters: ${activeCount} selected`;
+
+      filteredRows = rawRows.filter(row => {
+        if (chronotype !== 'ALL' && row[colIndex['chronotype']] !== chronotype) return false;
+        if (occupation !== 'ALL' && row[colIndex['occupation_type']] !== occupation) return false;
+        if (bucket !== 'ALL' && row[colIndex['screen_time_bucket']] !== bucket) return false;
+        if (app !== 'ALL' && row[colIndex['primary_bedtime_app']] !== app) return false;
+        if (blueLight !== 'ALL' && String(row[colIndex['blue_light_filter_active']]) !== blueLight) return false;
+        if (caffeine !== 'ALL' && String(row[colIndex['has_caffeine_flag']]) !== caffeine) return false;
+        return true;
+      });
+
+      currentPage = 1;
+      updateDashboard();
+    }
+
+    function resetFilters() {
+      document.getElementById('filterChronotype').value = 'ALL';
+      document.getElementById('filterOccupation').value = 'ALL';
+      document.getElementById('filterScreenBucket').value = 'ALL';
+      document.getElementById('filterApp').value = 'ALL';
+      document.getElementById('filterBlueLight').value = 'ALL';
+      document.getElementById('filterCaffeine').value = 'ALL';
+      document.getElementById('tableSearch').value = '';
+      applyFilters();
+    }
+
+    function updateDashboard() {
+      updateKPIs();
+      updateCharts();
+      renderTable();
+    }
+
+    function updateKPIs() {
+      const n = filteredRows.length;
+      const totalStudy = rawRows.length;
+
+      document.getElementById('kpiUsers').textContent = n.toLocaleString();
+      document.getElementById('kpiUsersSub').textContent = `${((n / totalStudy) * 100).toFixed(1)}% of study population`;
+
+      if (n === 0) {
+        document.getElementById('kpiSleep').textContent = '--';
+        document.getElementById('kpiScreen').textContent = '--';
+        document.getElementById('kpiLatency').textContent = '--';
+        document.getElementById('kpiFatigue').textContent = '--';
+        document.getElementById('kpiDebt').textContent = '--';
+        return;
+      }
+
+      let sumSleep = 0, sumScreen = 0, sumLatency = 0, sumFatigue = 0;
+      let severeCount = 0, highFatigueCount = 0;
+
+      for (let i = 0; i < n; i++) {
+        const r = filteredRows[i];
+        sumSleep += r[colIndex['total_sleep_hours']];
+        sumScreen += r[colIndex['bedtime_phone_minutes']];
+        sumLatency += r[colIndex['sleep_latency_min']];
+        sumFatigue += r[colIndex['next_day_fatigue_score']];
+        const debtCat = r[colIndex['sleep_debt_category']];
+        if (debtCat === 'Moderate Debt' || debtCat === 'Severe Sleep Debt') severeCount++;
+        if (r[colIndex['high_fatigue_flag']] === 1) highFatigueCount++;
+      }
+
+      const avgSleep = sumSleep / n;
+      const avgScreen = sumScreen / n;
+      const avgLatency = sumLatency / n;
+      const avgFatigue = sumFatigue / n;
+      const pctDebt = (severeCount / n) * 100;
+      const pctHighFatigue = (highFatigueCount / n) * 100;
+
+      document.getElementById('kpiSleep').textContent = `${avgSleep.toFixed(2)} hrs`;
+      document.getElementById('kpiScreen').textContent = `${avgScreen.toFixed(1)} min`;
+      document.getElementById('kpiLatency').textContent = `${avgLatency.toFixed(1)} min`;
+      document.getElementById('kpiFatigue').textContent = `${avgFatigue.toFixed(2)} / 10`;
+      document.getElementById('kpiFatigueSub').textContent = `${pctHighFatigue.toFixed(1)}% severe fatigue (≥7)`;
+      document.getElementById('kpiDebt').textContent = `${pctDebt.toFixed(1)}%`;
+      document.getElementById('kpiDebtSub').textContent = `${severeCount.toLocaleString()} users affected`;
+    }
+
+    // Chart.js helper for consistent styling
+    const chartDefaults = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#94A3B8', font: { size: 11, weight: '600' } }
+        },
+        tooltip: {
+          backgroundColor: '#1E293B',
+          titleColor: '#F8FAFC',
+          bodyColor: '#E2E8F0',
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 10,
+          cornerRadius: 8
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(51, 65, 85, 0.25)' },
+          ticks: { color: '#94A3B8', font: { size: 10.5 } }
+        },
+        y: {
+          grid: { color: 'rgba(51, 65, 85, 0.25)' },
+          ticks: { color: '#94A3B8', font: { size: 10.5 } }
+        }
+      }
+    };
+
+    function initCharts() {
+      // 1. Screen Time Chart
+      const ctxScreen = document.getElementById('chartScreenTime').getContext('2d');
+      chartInstances.screenTime = new Chart(ctxScreen, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+          ...chartDefaults,
+          scales: {
+            x: chartDefaults.scales.x,
+            y: {
+              ...chartDefaults.scales.y,
+              title: { display: true, text: 'Sleep Duration (Hours)', color: '#3B82F6' },
+              suggestedMax: 8.5
+            },
+            y1: {
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: { color: '#EF4444' },
+              title: { display: true, text: 'Latency (Minutes)', color: '#EF4444' },
+              suggestedMax: 85
+            }
+          }
+        }
+      });
+
+      // 2. Debt Pie Chart
+      const ctxPie = document.getElementById('chartDebtPie').getContext('2d');
+      chartInstances.debtPie = new Chart(ctxPie, {
+        type: 'doughnut',
+        data: { labels: [], datasets: [] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#94A3B8', font: { size: 11 } } },
+            tooltip: chartDefaults.plugins.tooltip
+          }
+        }
+      });
+
+      // 3. Apps Chart
+      const ctxApps = document.getElementById('chartApps').getContext('2d');
+      chartInstances.apps = new Chart(ctxApps, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+          ...chartDefaults,
+          indexAxis: 'y',
+          scales: {
+            x: { ...chartDefaults.scales.x, suggestedMax: 8 },
+            y: chartDefaults.scales.y
+          }
+        }
+      });
+
+      // 4. Chronotype vs Occupation Chart
+      const ctxChrono = document.getElementById('chartChronotype').getContext('2d');
+      chartInstances.chronotype = new Chart(ctxChrono, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+          ...chartDefaults,
+          scales: {
+            x: chartDefaults.scales.x,
+            y: { ...chartDefaults.scales.y, suggestedMax: 8 }
+          }
+        }
+      });
+
+      // 5. Interventions Chart
+      const ctxInterv = document.getElementById('chartInterventions').getContext('2d');
+      chartInstances.interventions = new Chart(ctxInterv, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+          ...chartDefaults,
+          scales: {
+            x: chartDefaults.scales.x,
+            y: { ...chartDefaults.scales.y, suggestedMax: 50 }
+          }
+        }
+      });
+
+      // 6. Age Chart
+      const ctxAge = document.getElementById('chartAge').getContext('2d');
+      chartInstances.age = new Chart(ctxAge, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+          ...chartDefaults,
+          scales: {
+            x: chartDefaults.scales.x,
+            y: { ...chartDefaults.scales.y, title: { display: true, text: 'Bedtime Phone (min)', color: '#6366F1' }, suggestedMax: 80 },
+            y1: {
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: { color: '#EF4444' },
+              title: { display: true, text: '% High Fatigue', color: '#EF4444' },
+              suggestedMax: 40
+            }
+          }
+        }
+      });
+    }
+
+    function updateCharts() {
+      // 1. Screen Time Buckets
+      const buckets = ['Low (<30 min)', 'Moderate (30-59 min)', 'High (60-119 min)', 'Very High (120+ min)'];
+      const bucketAgg = {};
+      buckets.forEach(b => { bucketAgg[b] = { count: 0, sleep: 0, latency: 0 }; });
+
+      filteredRows.forEach(r => {
+        const b = r[colIndex['screen_time_bucket']];
+        if (bucketAgg[b]) {
+          bucketAgg[b].count++;
+          bucketAgg[b].sleep += r[colIndex['total_sleep_hours']];
+          bucketAgg[b].latency += r[colIndex['sleep_latency_min']];
+        }
+      });
+
+      const screenLabels = ['<30m (Low)', '30-59m (Mod)', '60-119m (High)', '120m+ (V.High)'];
+      const avgSleepData = buckets.map(b => bucketAgg[b].count > 0 ? (bucketAgg[b].sleep / bucketAgg[b].count).toFixed(2) : 0);
+      const avgLatencyData = buckets.map(b => bucketAgg[b].count > 0 ? (bucketAgg[b].latency / bucketAgg[b].count).toFixed(1) : 0);
+
+      chartInstances.screenTime.data = {
+        labels: screenLabels,
+        datasets: [
+          {
+            label: 'Avg Sleep Duration (hrs)',
+            data: avgSleepData,
+            backgroundColor: '#3B82F6',
+            borderRadius: 6,
+            yAxisID: 'y'
+          },
+          {
+            type: 'line',
+            label: 'Avg Sleep Latency (min)',
+            data: avgLatencyData,
+            borderColor: '#EF4444',
+            backgroundColor: '#EF4444',
+            borderWidth: 3,
+            pointRadius: 5,
+            yAxisID: 'y1'
+          }
+        ]
+      };
+      chartInstances.screenTime.update();
+
+      // 2. Sleep Debt Donut
+      const categories = ['Optimal Recovery', 'Mild Deficit', 'Moderate Debt', 'Severe Sleep Debt'];
+      const catColors = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'];
+      const catCounts = { 'Optimal Recovery': 0, 'Mild Deficit': 0, 'Moderate Debt': 0, 'Severe Sleep Debt': 0 };
+
+      filteredRows.forEach(r => {
+        const c = r[colIndex['sleep_debt_category']];
+        if (catCounts[c] !== undefined) catCounts[c]++;
+      });
+
+      chartInstances.debtPie.data = {
+        labels: categories,
+        datasets: [{
+          data: categories.map(c => catCounts[c]),
+          backgroundColor: catColors,
+          borderWidth: 2,
+          borderColor: '#111827'
+        }]
+      };
+      chartInstances.debtPie.update();
+
+      // 3. Bedtime Apps Horizontal Bar
+      const apps = ['TikTok / Reels', 'Instagram / Reddit', 'YouTube', 'Streaming (Netflix/Hulu)', 'Messaging / Chat', 'News / Reading'];
+      const appAgg = {};
+      apps.forEach(a => { appAgg[a] = { count: 0, sleep: 0, fatigue: 0 }; });
+
+      filteredRows.forEach(r => {
+        const a = r[colIndex['primary_bedtime_app']];
+        if (appAgg[a]) {
+          appAgg[a].count++;
+          appAgg[a].sleep += r[colIndex['total_sleep_hours']];
+          appAgg[a].fatigue += r[colIndex['next_day_fatigue_score']];
+        }
+      });
+
+      // Sort by sleep ascending
+      const sortedApps = apps.slice().sort((a, b) => {
+        const avgA = appAgg[a].count > 0 ? appAgg[a].sleep / appAgg[a].count : 0;
+        const avgB = appAgg[b].count > 0 ? appAgg[b].sleep / appAgg[b].count : 0;
+        return avgA - avgB;
+      });
+
+      chartInstances.apps.data = {
+        labels: sortedApps,
+        datasets: [
+          {
+            label: 'Avg Sleep Hours',
+            data: sortedApps.map(a => appAgg[a].count > 0 ? (appAgg[a].sleep / appAgg[a].count).toFixed(2) : 0),
+            backgroundColor: '#6366F1',
+            borderRadius: 6
+          },
+          {
+            label: 'Avg Fatigue (1-10)',
+            data: sortedApps.map(a => appAgg[a].count > 0 ? (appAgg[a].fatigue / appAgg[a].count).toFixed(2) : 0),
+            backgroundColor: '#F59E0B',
+            borderRadius: 6
+          }
+        ]
+      };
+      chartInstances.apps.update();
+
+      // 4. Chronotype vs Occupation
+      const occupations = ['Corporate 9-to-5', 'Remote Tech', 'Student', 'Healthcare / Shift Worker', 'Freelance / Creative'];
+      const chronotypes = ['Morning Lark', 'Intermediate', 'Night Owl'];
+      const chronoColors = { 'Morning Lark': '#10B981', 'Intermediate': '#3B82F6', 'Night Owl': '#8B5CF6' };
+
+      const occChronoAgg = {};
+      occupations.forEach(occ => {
+        occChronoAgg[occ] = {};
+        chronotypes.forEach(chr => { occChronoAgg[occ][chr] = { count: 0, sleep: 0 }; });
+      });
+
+      filteredRows.forEach(r => {
+        const occ = r[colIndex['occupation_type']];
+        const chr = r[colIndex['chronotype']];
+        if (occChronoAgg[occ] && occChronoAgg[occ][chr]) {
+          occChronoAgg[occ][chr].count++;
+          occChronoAgg[occ][chr].sleep += r[colIndex['total_sleep_hours']];
+        }
+      });
+
+      const chronoDatasets = chronotypes.map(chr => ({
+        label: chr,
+        backgroundColor: chronoColors[chr],
+        borderRadius: 4,
+        data: occupations.map(occ => {
+          const item = occChronoAgg[occ][chr];
+          return item.count > 0 ? (item.sleep / item.count).toFixed(2) : 0;
+        })
+      }));
+
+      chartInstances.chronotype.data = {
+        labels: ['Corporate', 'Remote Tech', 'Student', 'Healthcare', 'Freelance'],
+        datasets: chronoDatasets
+      };
+      chartInstances.chronotype.update();
+
+      // 5. Interventions (Blue light & Late Caffeine)
+      let blOff = { count: 0, latency: 0, deep: 0 }, blOn = { count: 0, latency: 0, deep: 0 };
+      let cafNo = { count: 0, latency: 0, deep: 0 }, cafYes = { count: 0, latency: 0, deep: 0 };
+
+      filteredRows.forEach(r => {
+        const bl = r[colIndex['blue_light_filter_active']];
+        const caf = r[colIndex['has_caffeine_flag']];
+        const lat = r[colIndex['sleep_latency_min']];
+        const deep = r[colIndex['deep_sleep_pct']];
+
+        if (bl === 1) { blOn.count++; blOn.latency += lat; blOn.deep += deep; }
+        else { blOff.count++; blOff.latency += lat; blOff.deep += deep; }
+
+        if (caf === 1) { cafYes.count++; cafYes.latency += lat; cafYes.deep += deep; }
+        else { cafNo.count++; cafNo.latency += lat; cafNo.deep += deep; }
+      });
+
+      chartInstances.interventions.data = {
+        labels: ['Blue Light OFF', 'Blue Light ON', 'No Late Caffeine', 'Caffeine Post-5pm'],
+        datasets: [
+          {
+            label: 'Sleep Latency (min)',
+            data: [
+              blOff.count > 0 ? (blOff.latency / blOff.count).toFixed(1) : 0,
+              blOn.count > 0 ? (blOn.latency / blOn.count).toFixed(1) : 0,
+              cafNo.count > 0 ? (cafNo.latency / cafNo.count).toFixed(1) : 0,
+              cafYes.count > 0 ? (cafYes.latency / cafYes.count).toFixed(1) : 0
+            ],
+            backgroundColor: '#EF4444',
+            borderRadius: 6
+          },
+          {
+            label: 'Deep Sleep %',
+            data: [
+              blOff.count > 0 ? (blOff.deep / blOff.count).toFixed(1) : 0,
+              blOn.count > 0 ? (blOn.deep / blOn.count).toFixed(1) : 0,
+              cafNo.count > 0 ? (cafNo.deep / cafNo.count).toFixed(1) : 0,
+              cafYes.count > 0 ? (cafYes.deep / cafYes.count).toFixed(1) : 0
+            ],
+            backgroundColor: '#3B82F6',
+            borderRadius: 6
+          }
+        ]
+      };
+      chartInstances.interventions.update();
+
+      // 6. Age Profile
+      const ageGroups = ['18-24', '25-34', '35-44', '45-54', '55+'];
+      const ageAgg = {};
+      ageGroups.forEach(ag => { ageAgg[ag] = { count: 0, phone: 0, highFatigue: 0 }; });
+
+      filteredRows.forEach(r => {
+        const ag = r[colIndex['age_group']];
+        if (ageAgg[ag]) {
+          ageAgg[ag].count++;
+          ageAgg[ag].phone += r[colIndex['bedtime_phone_minutes']];
+          if (r[colIndex['high_fatigue_flag']] === 1) ageAgg[ag].highFatigue++;
+        }
+      });
+
+      chartInstances.age.data = {
+        labels: ageGroups,
+        datasets: [
+          {
+            label: 'Bedtime Phone (min)',
+            data: ageGroups.map(ag => ageAgg[ag].count > 0 ? (ageAgg[ag].phone / ageAgg[ag].count).toFixed(1) : 0),
+            backgroundColor: '#6366F1',
+            borderRadius: 6,
+            yAxisID: 'y'
+          },
+          {
+            type: 'line',
+            label: '% High Fatigue (≥7)',
+            data: ageGroups.map(ag => ageAgg[ag].count > 0 ? ((ageAgg[ag].highFatigue / ageAgg[ag].count) * 100).toFixed(1) : 0),
+            borderColor: '#EF4444',
+            backgroundColor: '#EF4444',
+            borderWidth: 3,
+            pointRadius: 5,
+            yAxisID: 'y1'
+          }
+        ]
+      };
+      chartInstances.age.update();
+    }
+
+    // Data Table logic
+    let searchFilteredRows = [];
+
+    function onSearchTable() {
+      currentPage = 1;
+      renderTable();
+    }
+
+    function renderTable() {
+      const query = document.getElementById('tableSearch').value.toLowerCase().trim();
+      searchFilteredRows = filteredRows.filter(r => {
+        if (!query) return true;
+        const uid = String(r[colIndex['user_id']]).toLowerCase();
+        const occ = String(r[colIndex['occupation_type']]).toLowerCase();
+        const app = String(r[colIndex['primary_bedtime_app']]).toLowerCase();
+        const cat = String(r[colIndex['sleep_debt_category']]).toLowerCase();
+        return uid.includes(query) || occ.includes(query) || app.includes(query) || cat.includes(query);
+      });
+
+      const total = searchFilteredRows.length;
+      const totalPages = Math.ceil(total / pageSize) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const start = (currentPage - 1) * pageSize;
+      const end = Math.min(start + pageSize, total);
+      const pageRows = searchFilteredRows.slice(start, end);
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      if (pageRows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 24px; color: #64748B;">No matching records found.</td></tr>';
+      } else {
+        pageRows.forEach(r => {
+          const debt = r[colIndex['sleep_debt_category']];
+          let badgeClass = 'badge-optimal';
+          if (debt === 'Mild Deficit') badgeClass = 'badge-mild';
+          else if (debt === 'Moderate Debt') badgeClass = 'badge-mod';
+          else if (debt === 'Severe Sleep Debt') badgeClass = 'badge-severe';
+
+          const blActive = r[colIndex['blue_light_filter_active']] === 1 ? 'Active' : 'Off';
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="font-weight: 600; color: #60A5FA;">${r[colIndex['user_id']]}</td>
+            <td>${r[colIndex['age']]} (${r[colIndex['gender']]})</td>
+            <td>${r[colIndex['occupation_type']]}</td>
+            <td>${r[colIndex['chronotype']]}</td>
+            <td>${r[colIndex['primary_bedtime_app']]}</td>
+            <td>${r[colIndex['bedtime_phone_minutes']]}m</td>
+            <td>${blActive}</td>
+            <td style="font-weight: 600;">${r[colIndex['total_sleep_hours']].toFixed(1)}h</td>
+            <td>${r[colIndex['sleep_latency_min']].toFixed(0)}m</td>
+            <td>${r[colIndex['next_day_fatigue_score']].toFixed(1)}</td>
+            <td><span class="badge ${badgeClass}">${debt}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      document.getElementById('tableRecordCount').textContent = `Showing ${total > 0 ? start + 1 : 0}-${end} of ${total.toLocaleString()} filtered records`;
+      document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+      document.getElementById('btnPrev').disabled = (currentPage <= 1);
+      document.getElementById('btnNext').disabled = (currentPage >= totalPages);
+    }
+
+    function changePage(delta) {
+      currentPage += delta;
+      renderTable();
+    }
+
+    function exportFilteredCSV() {
+      if (filteredRows.length === 0) {
+        alert("No records to export!");
+        return;
+      }
+      const cols = window.SLEEP_DEBT_DATA.columns;
+      let csv = cols.join(',') + '\n';
+      filteredRows.forEach(r => {
+        csv += r.map(val => typeof val === 'string' ? `"${val}"` : val).join(',') + '\n';
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `sleep_debt_filtered_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Launch
+    window.addEventListener('DOMContentLoaded', initData);
+  </script>
+</body>
+</html>

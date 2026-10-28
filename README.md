@@ -17,8 +17,9 @@ An end-to-end data engineering project that turns a raw CSV about **bedtime phon
 8. [Repository structure](#8-repository-structure)
 9. [How to run](#9-how-to-run)
 10. [Analytics queries](#10-analytics-queries)
-11. [Design decisions and limitations](#11-design-decisions-and-limitations)
-12. [Tech stack](#12-tech-stack)
+11. [Visualizations & Dashboard](#11-visualizations--dashboard)
+12. [Design decisions and limitations](#12-design-decisions-and-limitations)
+13. [Tech stack](#13-tech-stack)
 
 ---
 
@@ -30,7 +31,7 @@ An end-to-end data engineering project that turns a raw CSV about **bedtime phon
 | **Source** | `bedtime_screentime_sleep_debt.csv` (8,500 users × 18 columns) |
 | **Cleaning** | Python (pandas) in a Jupyter notebook |
 | **Warehouse** | SQL Server, four schemas: `staging`, `bronze`, `silver`, `gold` |
-| **Output** | Star schema views and 10 ready-to-run analytics queries |
+| **Output** | Star schema views, 10 analytics queries, and interactive visualizations |
 
 **Business questions the warehouse answers**
 - Does more phone time before bed mean less sleep and more fatigue?
@@ -49,7 +50,7 @@ flowchart LR
     D --> E[(BRONZE<br/>native types + bronze_id<br/>incremental upsert)]
     E --> F[(SILVER<br/>constrained dims + fact<br/>business rules)]
     F --> G[[GOLD<br/>star schema views]]
-    G --> H[Analytics queries<br/>BI tools]
+    G --> H[Analytics queries<br/>BI tools & Dashboards]
 ```
 
 | Layer | Purpose | Key rules |
@@ -238,6 +239,15 @@ sleep-debt-medallion-data-warehouse/
 ├── 05_analytics_queries.sql      # business analysis
 ├── python_cleaning/
 │   └── clean_sleep_data.ipynb    # Phase 1 cleaning notebook
+├── visualization/                # Analytics & Visualization Suite
+│   ├── dashboard.html            # Standalone interactive web dashboard
+│   ├── dashboard_data.js         # Offline JSON data bundle
+│   ├── chart.umd.min.js          # Local Chart.js library
+│   ├── generate_charts.py        # Python publication figure generator
+│   ├── generate_notebook.py      # Notebook generator script
+│   ├── sleep_debt_analytics_visualizations.ipynb  # Executed analytics notebook
+│   ├── BI_DASHBOARD_GUIDE.md     # Power BI & Tableau star-schema guide
+│   └── figures/                  # 8 generated high-res publication charts
 ├── data/
 │   ├── bedtime_screentime_sleep_debt.csv         # raw
 │   ├── bedtime_screentime_sleep_debt_clean.csv   # cleaned (staging input)
@@ -250,7 +260,7 @@ sleep-debt-medallion-data-warehouse/
 ## 9. How to run
 
 ### Requirements
-- Python 3 with `pandas` and Jupyter
+- Python 3 with `pandas`, `matplotlib`, `seaborn`, and Jupyter
 - SQL Server 2017 or later (needed for `BULK INSERT ... FORMAT = 'CSV'`) and SSMS or Azure Data Studio
 
 ### Steps
@@ -280,7 +290,7 @@ EXEC silver.load_silver;
 
 > The file path is read by the SQL Server **service**, not by your PC. Copy the clean CSV to a folder the server can access, and change the path above to match.
 
-**4. Analyze**
+**4. Analyze in SQL**
 Run `05_analytics_queries.sql`.
 
 **Sanity check after loading**
@@ -293,6 +303,11 @@ UNION ALL SELECT 'gold',   COUNT(*) FROM gold.fact_sleep_record;
 ```
 
 All four counts should be 8,500 for the provided dataset.
+
+**5. Explore Visualizations & Dashboard**
+- **Interactive Dashboard**: Double-click [`visualization/dashboard.html`](visualization/dashboard.html) in your browser.
+- **Generate All Figures**: Run `python visualization/generate_charts.py`.
+- **Interactive Notebook**: Open [`visualization/sleep_debt_analytics_visualizations.ipynb`](visualization/sleep_debt_analytics_visualizations.ipynb).
 
 ---
 
@@ -315,7 +330,31 @@ All four counts should be 8,500 for the provided dataset.
 
 ---
 
-## 11. Design decisions and limitations
+## 11. Visualizations & Dashboard
+
+The project includes a complete analytics and reporting suite in [`visualization/`](visualization/):
+
+| Asset | Description |
+|---|---|
+| **Interactive Web Dashboard** | [`visualization/dashboard.html`](visualization/dashboard.html): Self-contained, responsive dashboard with real-time client-side slicing by chronotype, occupation, screen bucket, and bedtime app. Features 8 dynamic Chart.js visualizations, KPI stat cards, and an interactive CSV data exporter. Runs 100% offline. |
+| **Executive Summary Infographic** | [`visualization/figures/00_executive_dashboard_summary.png`](visualization/figures/00_executive_dashboard_summary.png): 300 DPI multi-panel infographic poster synthesizing cohort health KPIs, screen-time curves, and behavioral drivers. |
+| **Python Visualization Engine** | [`visualization/generate_charts.py`](visualization/generate_charts.py): Script generating 8 publication-ready figures saved in `visualization/figures/`. |
+| **Jupyter Analytics Notebook** | [`visualization/sleep_debt_analytics_visualizations.ipynb`](visualization/sleep_debt_analytics_visualizations.ipynb): Executed notebook with embedded charts, distribution tests, and narrative findings. |
+| **Power BI & Tableau Guide** | [`visualization/BI_DASHBOARD_GUIDE.md`](visualization/BI_DASHBOARD_GUIDE.md): Star schema ER diagram, pre-built DAX measures, Tableau calculated fields, and layout wireframes. |
+
+### Generated Publication Figures
+- `00_executive_dashboard_summary.png` - Master executive summary dashboard infographic
+- `01_screen_time_vs_sleep_metrics.png` - Screen time buckets vs total sleep hours, latency, and fatigue
+- `02_sleep_debt_distribution.png` - Sleep debt severity classification breakdown (donut + bar)
+- `03_bedtime_apps_impact.png` - Bedtime applications ranked by sleep disruption and fatigue
+- `04_chronotype_and_occupation.png` - Social jetlag heatmap: chronotypes vs occupational schedules
+- `05_blue_light_and_caffeine_effects.png` - Efficacy of blue light filters and late caffeine impact
+- `06_correlation_matrix.png` - Full Pearson correlation heatmap of sleep architecture metrics
+- `07_physical_activity_and_age_profiles.png` - Physical activity quartiles and age group risk profiles
+
+---
+
+## 12. Design decisions and limitations
 
 - **One fact table at user grain.** The source has one row per user and no dates, so there is no time dimension and no trend analysis.
 - **Bronze upserts in place.** Changed users are updated and new users are inserted, with cleanup keeping the highest `bronze_id`. It does not keep a history of changes. If history is needed, switch to an insert-only version pattern.
@@ -328,9 +367,9 @@ All four counts should be 8,500 for the provided dataset.
 
 ---
 
-## 12. Tech stack
+## 13. Tech stack
 
-Python · pandas · Jupyter Notebook · SQL Server · T-SQL · Medallion Architecture · Star Schema · Mermaid (diagrams)
+Python · pandas · Matplotlib · Seaborn · Jupyter Notebook · Chart.js · SQL Server · T-SQL · Medallion Architecture · Star Schema · Mermaid (diagrams)
 
 ---
 
